@@ -15,7 +15,6 @@
 #define EncoderChnB 4       //Entrada digital encoder 2.
 #define EncoderBttn 0       //Entrada analogica (Botones A, B y E).
 #define DisplayPin 3        //Para utilizar con el transistor y apagar/encender el LCD (¿esta libre el pin 3?).
-#define LuzLcdPin A1        //Salida analogica para encender o apagar backlight.
 #define TIEMPO_MAX 30000    //Tiempo en milisegundos para que se apague la pantalla si no se toca ningun boton.
 
 //Variables globales
@@ -149,8 +148,7 @@ void lecturaEntradas(byte total_lineas) {
   if (tempB!=NO_KEY){
     if (luz==0){ //Si la luz esta apagada al pulsar un boton lo unico que se hace es encender la luz.
       luz=1;
-      analogWrite(LuzLcdPin, 255); //ELIMINAR: Cuando ponga el transistor
-      digitalWrite(DisplayPin, 0);
+      digitalWrite(DisplayPin, 1);
       tiempo_luz = millis();        
     }
     else {
@@ -250,6 +248,7 @@ void lecturaEntradas(byte total_lineas) {
             case 2:
             case 3:
               //En funcion del nivel en que nos encontremos el aleatorio es de todo, artista o album.
+              pintaMensaje("Creando aleatorio...");
               maxEntradas = listadoAleatorio(nivel);
               siguienteAleatorio();
               MP3player.tocaMP3(nombreFichero);
@@ -540,7 +539,7 @@ void pintaMensaje(char *mensaje) {
     u8g.setFontRefHeightText();
     u8g.setFontPosTop();
   
-    u8g.drawStr(1, 10, mensaje);
+    u8g.drawStr(1, 24, mensaje);
   } while(u8g.nextPage());   
 }
 
@@ -767,6 +766,11 @@ void siguienteAleatorio()
 
 void setup()
 {
+  luz=1;
+  pinMode(DisplayPin, OUTPUT);
+  digitalWrite(DisplayPin, 1);
+  tiempo_luz = millis();
+  
   pinMode(EncoderChnA, INPUT);
   digitalWrite(EncoderChnA, HIGH);
   pinMode(EncoderChnB, INPUT);
@@ -793,12 +797,6 @@ void setup()
   MP3player.setVolumen(vol, vol);
   progAntiguo = 100;
 
-  luz=1;
-  pinMode(DisplayPin, OUTPUT);
-  digitalWrite(DisplayPin, 0);
-  analogWrite(LuzLcdPin, 255); //MODIFICAR: Cuando ponga el transistor
-  tiempo_luz = millis();
-
   delay(100);
 }
 
@@ -810,8 +808,7 @@ void loop(void) {
     pintaMensaje("SD NO INSERTADA");
   }*/
 
-  if (luz==1 && millis()>(tiempo_luz+TIEMPO_MAX)){ //Cuando pasa el tiempo estipulado se apaga la pantalla hasta que volvamos a tocar un boton.
-      analogWrite(LuzLcdPin, 0);
+  if (luz==1 && millis()>(tiempo_luz+TIEMPO_MAX)){ //Cuando pasa el tiempo marcado se apaga la pantalla hasta que volvamos a tocar un boton.
       digitalWrite(DisplayPin, 0);
       luz=0;
   }
