@@ -30,8 +30,8 @@ static const byte stat_seq[]={3,2,0,1,3,2,0,1,3};
 byte stat_seq_ptr;
 //Propio del menu/lectura SD
 int menu_current = 0;
-uint8_t menu_redraw_required = 0;
-uint8_t reprod_redraw_required = 0;
+boolean menu_redraw_required = 0;
+boolean reprod_redraw_required = 0;
 char strLinea [MAX_LONG]; //¿Esta variable la necesito como global? ¿Creo que si?
 char info [3][MAX_LONG];
 char nombreFichero [31];
@@ -41,7 +41,7 @@ int maxEntradas =  0;
 int cancion_aleatorio = 0;
 
 unsigned long tiempo_luz;
-uint8_t luz;
+boolean luz;
 
 //------------------------------------------------------------------------------
 /* \brief getKey : Identifica si se ha pulsado algun boton o se ha girado el encoder.
@@ -323,9 +323,9 @@ int cuentaFichero(char* nombre) {
  *  2 : Album.
  *  3 : Cancion / Informacion auxiliar para uso interno de funciones.
  *
- * \see Que la funcion devuelva un numero, siendo 0 que no ha conseguido abrir el fichero.
+ * \see Controlar fuera de la funcion que 0 significa que ha habido un error sacando la informacion del fichero.
  */
-void copiaInfo(int pos_info, byte campo, char* nombre) {
+boolean copiaInfo(int pos_info, byte campo, char* nombre) {
 
   //Variables
   File myFile = SD.open(nombre);  
@@ -366,7 +366,10 @@ void copiaInfo(int pos_info, byte campo, char* nombre) {
     myFile.close();
   } else {
     pintaMensaje("(I)PROBLEMA FICHERO.");
+    return 0;
   }
+
+  return 1;
 }
 
 
@@ -528,8 +531,6 @@ void dibujaReproduc(byte cancion, int total_canciones, int pos) {
  *  a la funcion.
  *
  * \param[in] mensaje : Informacion a mostrar en la pantalla.
- * 
- * \see ¿Mostrarlo de otra manera?
  */
 void pintaMensaje(char *mensaje) {
   u8g.firstPage();
