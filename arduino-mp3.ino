@@ -190,7 +190,7 @@ void lecturaEntradas(byte total_lineas) {
             case 1:
               id_cancion[nivel-1] = menu_current;
               menu_current = 1;
-              copiaInfo(id_cancion[nivel-1]-1, nivel-1, nombreFichero);
+              copiaInfo(id_cancion[nivel-1], nivel-1, nombreFichero);
               sprintf(nombreFichero, "ARTIS%03d/ALBUM.TXT", id_cancion[nivel-1]);
               maxEntradas = cuentaFichero(nombreFichero);
               nivel++;
@@ -198,14 +198,14 @@ void lecturaEntradas(byte total_lineas) {
             case 2:
               id_cancion[nivel-1] = menu_current;
               menu_current = 1;
-              copiaInfo(id_cancion[nivel-1]-1, nivel-1, nombreFichero);
+              copiaInfo(id_cancion[nivel-1], nivel-1, nombreFichero);
               sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCION.TXT", id_cancion[nivel-2], id_cancion[nivel-1]);
               maxEntradas = cuentaFichero(nombreFichero);
               nivel++;            
               break;
             case 3:
               id_cancion[nivel-1] = menu_current;
-              copiaInfo(id_cancion[nivel-1]-1, nivel-1, nombreFichero);
+              copiaInfo(id_cancion[nivel-1], nivel-1, nombreFichero);
               sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCI%03d.MP3", id_cancion[nivel-3], id_cancion[nivel-2], id_cancion[nivel-1]);
               MP3player.tocaMP3(nombreFichero);
               //Hacer algo si no consigo reproducir la cancion
@@ -339,11 +339,11 @@ boolean copiaInfo(int pos_info, byte campo, char* nombre) {
     while (myFile.available() && encontrado==0) { //Una vez saque la informacion termino de recorrer el fichero aunque no se haya acabado.
       letra = myFile.read();  
             
-      if (i<pos_info){ //Hasta que no he llegado a la linea de interes entro aqui para avanzar a la siguiente linea.
+      if (i<pos_info-1){ //Hasta que no he llegado a la linea de interes entro aqui para avanzar a la siguiente linea.
         if (letra==10)
           i++;        
       } 
-      else if (i==pos_info){ //Ya he llegado a la linea solicitada.
+      else if (i==pos_info-1){ //Ya he llegado a la linea solicitada.
 
         if (letra!=10 && letra!=13){ 
           if (letra=='ñ')             
@@ -471,6 +471,7 @@ void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
               u8g.setDefaultBackgroundColor();
             }          
             //sprintf(info[2], "%03d %03d %03d", i+2-pos_inicio, pos_actual, menu_current);
+            //u8g.drawStr(nivel-1, (i+2-pos_inicio)*h, info[2]);
             u8g.drawStr(nivel-1, (i+2-pos_inicio)*h, strLinea);
             i++;
           }          
@@ -517,12 +518,14 @@ void dibujaReproduc(byte cancion, int total_canciones, int pos) {
   u8g.drawBox(14, (i)*h+3, pos, 3);
 
   //Muestro volumen
-  sprintf(strLinea, "  VOL %02d/%02d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL));
+  sprintf(strLinea, " VOL.%02d/%02d TRK-%02d/%02d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL), cancion, total_canciones);
   u8g.drawStr(1, (i+1)*h, strLinea); 
 
   //Muestro cancion respecto a total
-  sprintf(strLinea, "  TRK %02d/%02d", cancion, total_canciones);
-  u8g.drawStr(1, (i+2)*h, strLinea); 
+  /*if (cancion_aleatorio!=0){
+    sprintf(strLinea, "  ALE %02d", cancion, total_canciones);  
+    u8g.drawStr(1, (i+2)*h, strLinea); 
+  }*/
 }
 
 
@@ -701,11 +704,11 @@ void siguienteCancion()
   }
 
   memset(info,0,sizeof(info));
-  copiaInfo(id_cancion[0]-1, 0, "ARTISTA.TXT");
-  copiaInfo(id_cancion[1]-1, 1, nombreFichero);
+  copiaInfo(id_cancion[0], 0, "ARTISTA.TXT");
+  copiaInfo(id_cancion[1], 1, nombreFichero);
   sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCION.TXT", id_cancion[0], id_cancion[1]);
   maxEntradas = cuentaFichero(nombreFichero);
-  copiaInfo(id_cancion[2]-1, 2, nombreFichero);
+  copiaInfo(id_cancion[2], 2, nombreFichero);
     
   sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCI%03d.MP3", id_cancion[0], id_cancion[1], id_cancion[2]);
 
@@ -733,14 +736,14 @@ void siguienteAleatorio()
   else
     cancion_aleatorio = 1;  //De momento voy a dejar el aleatorio en repeat hasta que decida que hacer
 
-  copiaInfo(cancion_aleatorio-1, 2, "RANDLIST.TXT");
+  copiaInfo(cancion_aleatorio, 2, "RANDLIST.TXT");
 
   for (i=0; i<5; i++)
     cad_temporal[i] = info[2][i];
   cad_temporal[5] = 0;
   linea_aleatorio = atoi(&cad_temporal[0]);
 
-  copiaInfo(linea_aleatorio-1, 2, "SONGLIST.TXT");
+  copiaInfo(linea_aleatorio, 2, "SONGLIST.TXT");
   
   //Ahora tengo la informacion sobre la cancion que tengo que reproducir en info[2]
   cad_temporal[0] = '0';  //Para los tres identificadores estos caracteres tienen estos valores fijos ya que son de 3 digitos
@@ -754,11 +757,11 @@ void siguienteAleatorio()
   }
 
   memset(info,0,sizeof(info));
-  copiaInfo(id_cancion[0]-1, 0, "ARTISTA.TXT");
+  copiaInfo(id_cancion[0], 0, "ARTISTA.TXT");
   sprintf(nombreFichero, "ARTIS%03d/ALBUM.TXT", id_cancion[0]);
-  copiaInfo(id_cancion[1]-1, 1, nombreFichero);
+  copiaInfo(id_cancion[1], 1, nombreFichero);
   sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCION.TXT", id_cancion[0], id_cancion[1]);
-  copiaInfo(id_cancion[2]-1, 2, nombreFichero);
+  copiaInfo(id_cancion[2], 2, nombreFichero);
   
   sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCI%03d.MP3", id_cancion[0], id_cancion[1], id_cancion[2]);
   maxEntradas = cuentaFichero("RANDLIST.TXT");
@@ -856,13 +859,3 @@ void loop(void) {
   //Leemos si hay alguna actualización en los botones/encoder
   lecturaEntradas(maxEntradas);
 }
-
-//NOTAS (12/08/2016)
-// * siguienteCancion : Quito variable ficheroAlbum. Pongo nota para probar a quitar algo mas.
-// * siguienteAleatorio : Quito la variable ficheroAlbum. Pongo nota para probar a quitar algo mas.
-// * Mirar en el bucle siempre si la tarjeta sigue existiendo. Si no hacer algo para que el resto no falle.
-// * Revisar los indices por todo el codigo. Tratar de quitar todas las sumas y restas.
-//
-//
-//
-//
