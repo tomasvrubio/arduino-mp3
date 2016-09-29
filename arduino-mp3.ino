@@ -24,7 +24,7 @@ byte vol;
 byte progActual;
 byte progAntiguo;
 //PANTALLA
-U8GLIB_ST7920_128X64_1X u8g(0, 1, 10);  // Orden de variables definicion: SCK, MOSI, CS.
+U8GLIB_ST7920_128X64_1X u8g(0, 1, 10);  //Orden de variables definicion: SCK, MOSI, CS.
 //Encoder
 static const byte stat_seq[]={3,2,0,1,3,2,0,1,3};
 byte stat_seq_ptr;
