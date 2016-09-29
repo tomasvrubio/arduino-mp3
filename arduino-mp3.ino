@@ -406,12 +406,9 @@ void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
 
   //MOSTRAMOS EL LISTADO DEL MENU
   //TIPOGRAFIA DEL MENU
-  u8g.setFont(u8g_font_6x10r); 
+  u8g.setFont(u8g_font_baby);
   u8g.setFontRefHeightText();
   u8g.setFontPosTop();
-
-  //Calculamos la altura 
-  h = u8g.getFontAscent()-u8g.getFontDescent();
 
   //Calculo la posicion de inicio y la posicion en la que me encuentro en la matriz
   if (total_lineas<6) {
@@ -435,15 +432,20 @@ void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
   
   if (myFile) {
     //MOSTRAMOS LA PARTE SUPERIOR DEL MENU
+    //Calculamos la altura 
+    h = u8g.getFontAscent()-u8g.getFontDescent();
     w = u8g.getWidth();
     u8g.setDefaultForegroundColor();
-    u8g.drawHLine(0,17,w);
+
+    u8g.drawStr(w/3 - 3, 0, "ESCUCHA_ME");
+    u8g.drawHLine(0,8,w);
+    u8g.drawHLine(0,23,w);
 
     //Me sirve para ver en que numeros me estoy moviendo y asi puedo corregir en un futuro los desplaces que tengo entre contadores de funciones
     //sprintf(info[0], "%03d %03d %03d %03d", pos_actual, total_lineas, pos_menu, pos_inicio);
 
     while(i<nivel-1) {
-      u8g.drawStr(i, (i)*h, info[i]); 
+      u8g.drawStr(i, (i+1)*h +2, info[i]); 
       i++;
     }
 
@@ -473,11 +475,11 @@ void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
           if ( len > 0 ) {
             u8g.setDefaultForegroundColor();
             if (i==pos_menu+pos_inicio) {                           //saber en cual me encuentro. cambiarlo y ponerlo bien. sacar el valor fuera del bucle para no calcularlo varias veces
-              u8g.drawBox(0, (i+2-pos_inicio)*h+1, w, h);
+              u8g.drawBox(0, (i+4-pos_inicio)*h-3, w, h);
               u8g.setDefaultBackgroundColor();
             }          
             //sprintf(info[2], "%03d %03d %03d", i+2-pos_inicio, pos_actual, menu_current);
-            u8g.drawStr(nivel-1, (i+2-pos_inicio)*h, strLinea);
+            u8g.drawStr(nivel-1, (i+4-pos_inicio)*h-3, strLinea);
             i++;
           }          
         }
