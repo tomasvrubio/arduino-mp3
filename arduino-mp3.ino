@@ -17,29 +17,31 @@
 #define DisplayPin 3        //Para utilizar con el transistor y apagar/encender el LCD (¿esta libre el pin 3?).
 #define TIEMPO_MAX 30000    //Tiempo en milisegundos para que se apague la pantalla si no se toca ningun boton.
 
+
 //Variables globales
 //MP3
 AGMp3Player MP3player;
 byte vol;
 byte progActual;
 byte progAntiguo;
+
 //PANTALLA
 U8GLIB_ST7920_128X64_1X u8g(0, 1, 10);  //Orden de variables definicion: SCK, MOSI, CS.
+
 //Encoder
 static const byte stat_seq[]={3,2,0,1,3,2,0,1,3};
 byte stat_seq_ptr;
+
 //Propio del menu/lectura SD
 int menu_current = 0;
 boolean menu_redraw_required = 0;
-boolean reprod_redraw_required = 0;
-char strLinea [MAX_LONG]; //¿Esta variable la necesito como global? ¿Creo que si?
+//char strLinea [MAX_LONG]; //¿Esta variable la necesito como global? ¿Creo que si?
 char info [3][MAX_LONG];
 char nombreFichero [31];
 byte nivel;
 byte id_cancion[3];
 int maxEntradas =  0;
 int cancion_aleatorio = 0;
-
 unsigned long tiempo_luz;
 boolean luz;
 
@@ -216,8 +218,10 @@ void lecturaEntradas(byte total_lineas) {
               id_cancion[nivel-1] = menu_current;
               copiaInfo(id_cancion[nivel-1]-1, nivel-1, nombreFichero);
               preparaNombreFichero(id_cancion[0], id_cancion[1], id_cancion[2]);
-              if (nivel==3)
+              if (nivel==3){
                 MP3player.tocaMP3(nombreFichero);
+                progAntiguo = 100; 
+              }
               else{
                 menu_current = 1;
                 maxEntradas = cuentaFichero(nombreFichero);
@@ -258,6 +262,7 @@ void lecturaEntradas(byte total_lineas) {
               maxEntradas = listadoAleatorio(nivel);
               siguienteAleatorio();
               MP3player.tocaMP3(nombreFichero);
+              progAntiguo = 100; 
               nivel=4;
               break;
             case 4:
@@ -268,8 +273,8 @@ void lecturaEntradas(byte total_lineas) {
               else
                 siguienteAleatorio();
               MP3player.tocaMP3(nombreFichero);
-              menu_current = id_cancion[nivel-2];
-              reprod_redraw_required = 1;      
+              progAntiguo = 100; 
+              menu_current = id_cancion[nivel-2];    
               break;
           }
           break;     
@@ -334,7 +339,8 @@ int cuentaFichero(char* nombre) {
 boolean copiaInfo(int pos_info, byte campo, char* nombre) {
 
   //Variables
-  File myFile = SD.open(nombre);  
+  File myFile = SD.open(nombre);
+  char lineaLeida [MAX_LONG];
   byte pos_letra = 0;
   byte len = 0;
   char letra;
@@ -354,16 +360,16 @@ boolean copiaInfo(int pos_info, byte campo, char* nombre) {
         if (letra!=10 && letra!=13){ 
           if (letra=='ñ')             
             letra = 'n'+125;          
-          strLinea[pos_letra]=letra;
+          lineaLeida[pos_letra]=letra;
           pos_letra++;
         
         } else {
-          strLinea[pos_letra]=0;
+          lineaLeida[pos_letra]=0;
           pos_letra=0;
  
-          len = min(strlen(strLinea),20); //Me quedo con la longitud de la cadena solo si mide menos de 20 caracteres (tamaño maximo del array).
+          len = min(strlen(lineaLeida),20); //Me quedo con la longitud de la cadena solo si mide menos de 20 caracteres (tamaño maximo del array).
           if ( len > 0 ) {
-            strncpy(info[campo],strLinea,len);
+            strncpy(info[campo],lineaLeida,len);
             encontrado = 1;
           }          
         }
@@ -403,10 +409,11 @@ void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
   char letra;
   byte i = 0;
   File myFile = SD.open(nombre);
+  char lineaLeida [MAX_LONG];
 
   //MOSTRAMOS EL LISTADO DEL MENU
   //TIPOGRAFIA DEL MENU
-  u8g.setFont(u8g_font_baby);
+  u8g.setFont(u8g_font_babyr);
   u8g.setFontRefHeightText();
   u8g.setFontPosTop();
 
@@ -464,14 +471,14 @@ void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
           if (pos_letra<MAX_LONG-1){ //Solo me guardo las letras si no tengo llena ya la cadena donde almaceno la linea leida
             if (letra=='ñ')             
               letra = 'n'+125;          
-            strLinea[pos_letra]=letra;
+            lineaLeida[pos_letra]=letra;
             pos_letra++;
           }
         } else {
-          strLinea[pos_letra]=0;
+          lineaLeida[pos_letra]=0;
           pos_letra=0;
  
-          len = min(strlen(strLinea),20);
+          len = min(strlen(lineaLeida),20);
           if ( len > 0 ) {
             u8g.setDefaultForegroundColor();
             if (i==pos_menu+pos_inicio) {                           //saber en cual me encuentro. cambiarlo y ponerlo bien. sacar el valor fuera del bucle para no calcularlo varias veces
@@ -479,7 +486,7 @@ void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
               u8g.setDefaultBackgroundColor();
             }          
             //sprintf(info[2], "%03d %03d %03d", i+2-pos_inicio, pos_actual, menu_current);
-            u8g.drawStr(nivel-1, (i+4-pos_inicio)*h-3, strLinea);
+            u8g.drawStr(nivel-1, (i+4-pos_inicio)*h-3, lineaLeida);
             i++;
           }          
         }
@@ -504,10 +511,11 @@ void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
 void dibujaReproduc(byte cancion, int total_canciones, int pos) {
   uint8_t h, i;
   u8g_uint_t w, d;
+  char lineaCreada [MAX_LONG];
 
   //MOSTRAMOS EL LISTADO DEL MENU
   //TIPOGRAFIA DEL MENU
-  u8g.setFont(u8g_font_6x10r); 
+  u8g.setFont(u8g_font_babyr); 
   u8g.setFontRefHeightText();
   u8g.setFontPosTop(); 
   h = u8g.getFontAscent()-u8g.getFontDescent(); //Calculamos la altura
@@ -526,11 +534,11 @@ void dibujaReproduc(byte cancion, int total_canciones, int pos) {
 
   //Muestro todo
   //if (total_canciones<100){
-    //sprintf(strLinea, " VOL %02d/%02d TRK %02d/%02d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL), cancion, total_canciones);
+    //sprintf(lineaCreada, " VOL %02d/%02d TRK %02d/%02d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL), cancion, total_canciones);
   //} else{
-    sprintf(strLinea, "VOL %02d/%02d TRK %03d/%03d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL), cancion, total_canciones);
+    sprintf(lineaCreada, "VOL %02d/%02d TRK %03d/%03d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL), cancion, total_canciones);
   //}
-  u8g.drawStr(1, (i+2)*h, strLinea); 
+  u8g.drawStr(1, (i+2)*h, lineaCreada); 
 }
 
 
@@ -544,7 +552,7 @@ void pintaMensaje(char *mensaje) {
   u8g.firstPage();
   do  {
     u8g.setDefaultForegroundColor();
-    u8g.setFont(u8g_font_6x10r); 
+    u8g.setFont(u8g_font_babyr); 
     u8g.setFontRefHeightText();
     u8g.setFontPosTop();
   
@@ -798,8 +806,7 @@ void setup()
   id_cancion[1] = 0;
   id_cancion[2] = 0;
   nivel = 1; 
-  sprintf(nombreFichero, "ARTISTA.TXT");
-  maxEntradas = cuentaFichero(nombreFichero);
+  maxEntradas = cuentaFichero("ARTISTA.TXT");
   menu_redraw_required = 1;
   vol=80;
 
@@ -833,7 +840,7 @@ void loop(void) {
     }
     else { //Al estar reproduciendo mostramos la informacion de la cancion por pantalla
       progActual = MP3player.getPosicion();
-      if (progActual!=progAntiguo || reprod_redraw_required==1){ //Comprobar que ha cambiado el punto en el que se encontraba la cancion 
+      if (progActual!=progAntiguo){ //Comprobar que ha cambiado el punto en el que se encontraba la cancion 
         u8g.firstPage();
         do  {
           if (cancion_aleatorio==0)
@@ -842,8 +849,7 @@ void loop(void) {
             dibujaReproduc(cancion_aleatorio, maxEntradas, progActual);          
         } while(u8g.nextPage());  
       }
-      progAntiguo = progActual;
-      reprod_redraw_required = 0;      
+      progAntiguo = progActual;     
     }
   }
 
