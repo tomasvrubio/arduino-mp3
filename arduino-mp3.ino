@@ -6,6 +6,7 @@
 
 //Definiciones de parametros 
 #define MAX_LONG 21         //¿Cuanto es lo maximo que puedo mostrar en la pantalla? No merece la pena almacenar mas longitud, no??
+#define MAX_LONG_FICH 31
 #define MENU_LONG 5
 #define MAX_VOL 0
 #define MIN_VOL 100
@@ -36,11 +37,11 @@ int menu_current = 0;
 boolean menu_redraw_required = 0;
 //char strLinea [MAX_LONG]; //¿Esta variable la necesito como global? ¿Creo que si?
 char info [3][MAX_LONG];
-char nombreFichero [31];
+char nombreFichero [MAX_LONG_FICH];
 byte nivel;
 byte id_cancion[3];
 int maxEntradas =  0;
-int cancion_aleatorio = 0;
+//int cancion_aleatorio = 0;
 unsigned long tiempo_luz;
 boolean luz;
 
@@ -155,7 +156,6 @@ void preparaNombreFichero(byte artista, byte album, byte cancion)
   }
 }
 
-
 //------------------------------------------------------------------------------
 /* \brief lecturaEntradas : En base al punto en el que nos encontramos y a la 
  *  pulsacion que ejecuta el usuario se realiza una acción u otra.
@@ -168,6 +168,7 @@ void preparaNombreFichero(byte artista, byte album, byte cancion)
  */
 void lecturaEntradas(byte total_lineas) {
   char tempB=getKey();
+  
 
   if (tempB!=NO_KEY){
     if (luz==0){ //Si la luz esta apagada al pulsar un boton lo unico que se hace es encender la luz.
@@ -176,6 +177,7 @@ void lecturaEntradas(byte total_lineas) {
       tiempo_luz = millis();        
     }
     else {
+      
       switch (tempB) {
         case 'R': //En caso de girar a la izquierda la rueda.
           switch(nivel){
@@ -253,7 +255,7 @@ void lecturaEntradas(byte total_lineas) {
           break;
         case 'M': //En caso de pulsar el boton verde derecho
           switch(nivel){
-            case 1:
+            /*case 1:
             case 2:
             case 3:
               //En funcion del nivel en que nos encontremos el aleatorio es de todo, artista o album.
@@ -263,14 +265,14 @@ void lecturaEntradas(byte total_lineas) {
               MP3player.tocaMP3(nombreFichero);
               progreso = 100; 
               nivel=4;
-              break;
+              break;*/
             case 4:
               //Si pulsamos mientras estamos escuchando una cancion se pasa a la siguiente.
               MP3player.paraMp3();
-              if (cancion_aleatorio==0)
+              //if (cancion_aleatorio==0)
                 siguienteCancion();
-              else
-                siguienteAleatorio();
+              //else
+                //siguienteAleatorio();
               MP3player.tocaMP3(nombreFichero);
               progreso = 100;
               menu_current = id_cancion[nivel-2];    
@@ -299,7 +301,7 @@ void lecturaEntradas(byte total_lineas) {
  *  - 0 : Problemas a la hora de leer el fichero.
  *  - Resto : Lineas fichero.
  */
-int cuentaFichero(char* nombre) {
+int cuentaFichero(const char* nombre) {
 
   File myFile = SD.open(nombre);
   int lineas = 0;
@@ -335,7 +337,7 @@ int cuentaFichero(char* nombre) {
  *
  * \see Controlar fuera de la funcion que 0 significa que ha habido un error sacando la informacion del fichero.
  */
-boolean copiaInfo(int pos_info, byte campo, char* nombre) {
+boolean copiaInfo(int pos_info, byte campo, const char* nombre) {
 
   //Variables
   File myFile = SD.open(nombre);
@@ -345,6 +347,7 @@ boolean copiaInfo(int pos_info, byte campo, char* nombre) {
   char letra;
   int i = 0;
   uint8_t encontrado = 0;
+  
   
   if (myFile) {
     while (myFile.available() && encontrado==0) { //Una vez saque la informacion termino de recorrer el fichero aunque no se haya acabado.
@@ -398,7 +401,7 @@ boolean copiaInfo(int pos_info, byte campo, char* nombre) {
  *  Mirar el resto de tipografias por si hay una mejor.
  *  ¿Podria hacer que los espacios ocuparan menos?
  */
-void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
+void dibujaMenu(int pos_actual, int total_lineas, const char* nombre) {
   uint8_t h;
   u8g_uint_t w, d;
   byte pos_inicio;
@@ -407,8 +410,9 @@ void dibujaMenu(int pos_actual, int total_lineas, char* nombre) {
   byte len = 0;
   char letra;
   byte i = 0;
-  File myFile = SD.open(nombre);
   char lineaLeida [MAX_LONG];
+  File myFile = SD.open(nombre);
+  
 
   //MOSTRAMOS EL LISTADO DEL MENU
   //TIPOGRAFIA DEL MENU
@@ -545,7 +549,7 @@ void dibujaReproduc(byte cancion, int total_canciones, int pos) {
  *
  * \param[in] mensaje : Informacion a mostrar en la pantalla.
  */
-void pintaMensaje(char *mensaje) {
+void pintaMensaje(const char *mensaje) {
   u8g.firstPage();
   do  {
     u8g.setDefaultForegroundColor();
@@ -577,7 +581,7 @@ void pintaMensaje(char *mensaje) {
  *  
  * \see Hacer algo despues de llamar a listadoAleatorio para tratar la devolucion de 0 numeros.
  */
-int listadoAleatorio(byte caso)
+/*int listadoAleatorio(byte caso)
 {
   byte i,j,k;
   int total_aleatorio=0;
@@ -682,6 +686,7 @@ int listadoAleatorio(byte caso)
 
   return total_aleatorio;
 }
+*/
 
 
 //------------------------------------------------------------------------------
@@ -735,7 +740,7 @@ void siguienteCancion()
  * \see Le puedo poner un return y devolver 0 si he llegado a la ultima cancion. O bien
  *  algun numero mostrando que he tenido un error (cual?). 
  */
-void siguienteAleatorio()
+/*void siguienteAleatorio()
 {
   int linea_aleatorio;
   char cad_temporal[6];
@@ -776,6 +781,7 @@ void siguienteAleatorio()
   sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCI%03d.MP3", id_cancion[0], id_cancion[1], id_cancion[2]);
   maxEntradas = cuentaFichero("RANDLIST.TXT");
 }
+*/
 
 
 void setup()
@@ -840,10 +846,10 @@ void loop(void) {
         progreso = MP3player.getPosicion();
         u8g.firstPage();
         do  {
-          if (cancion_aleatorio==0)
+          //if (cancion_aleatorio==0)
             dibujaReproduc(menu_current, maxEntradas, progreso);
-          else
-            dibujaReproduc(cancion_aleatorio, maxEntradas, progreso);          
+          //else
+          //  dibujaReproduc(cancion_aleatorio, maxEntradas, progreso);          
         } while(u8g.nextPage());  
       }    
     }
@@ -852,10 +858,10 @@ void loop(void) {
   //Si termina de reproducir una cancion hay que pasar a la siguiente
   if (nivel==4){  
     if (!MP3player.estaTocando()){
-      if (cancion_aleatorio==0)
+      //if (cancion_aleatorio==0)
         siguienteCancion();
-      else
-        siguienteAleatorio();
+      //else
+      //  siguienteAleatorio();
         
       MP3player.tocaMP3(nombreFichero);
       menu_current = id_cancion[2];
