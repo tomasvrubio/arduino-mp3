@@ -22,8 +22,7 @@
 //MP3
 AGMp3Player MP3player;
 byte vol;
-byte progActual;
-byte progAntiguo;
+byte progreso; 
 
 //PANTALLA
 U8GLIB_ST7920_128X64_1X u8g(0, 1, 10);  //Orden de variables definicion: SCK, MOSI, CS.
@@ -220,7 +219,7 @@ void lecturaEntradas(byte total_lineas) {
               preparaNombreFichero(id_cancion[0], id_cancion[1], id_cancion[2]);
               if (nivel==3){
                 MP3player.tocaMP3(nombreFichero);
-                progAntiguo = 100; 
+                progreso = 100;
               }
               else{
                 menu_current = 1;
@@ -241,7 +240,7 @@ void lecturaEntradas(byte total_lineas) {
             case 4:
             if (nivel==4){
               MP3player.paraMp3();
-              cancion_aleatorio=0;
+              //cancion_aleatorio=0;
             }
             menu_current = id_cancion[nivel-2];
             id_cancion[nivel-2] = 0;
@@ -259,10 +258,10 @@ void lecturaEntradas(byte total_lineas) {
             case 3:
               //En funcion del nivel en que nos encontremos el aleatorio es de todo, artista o album.
               pintaMensaje("Creando aleatorio...");
-              maxEntradas = listadoAleatorio(nivel);
+              //maxEntradas = listadoAleatorio(nivel);
               siguienteAleatorio();
               MP3player.tocaMP3(nombreFichero);
-              progAntiguo = 100; 
+              progreso = 100; 
               nivel=4;
               break;
             case 4:
@@ -273,7 +272,7 @@ void lecturaEntradas(byte total_lineas) {
               else
                 siguienteAleatorio();
               MP3player.tocaMP3(nombreFichero);
-              progAntiguo = 100; 
+              progreso = 100;
               menu_current = id_cancion[nivel-2];    
               break;
           }
@@ -340,7 +339,7 @@ boolean copiaInfo(int pos_info, byte campo, char* nombre) {
 
   //Variables
   File myFile = SD.open(nombre);
-  char lineaLeida [MAX_LONG];
+  char lineaLeida[MAX_LONG];
   byte pos_letra = 0;
   byte len = 0;
   char letra;
@@ -529,16 +528,14 @@ void dibujaReproduc(byte cancion, int total_canciones, int pos) {
   //u8g.drawHLine(0,(i)*h+1,w); //Calcular a que altura tengo que poner la linea
 
   //Muestro barra progreso
-  u8g.drawFrame(14, (i+1)*h+2, w-28, 5);
-  u8g.drawBox(14, (i+1)*h+3, pos, 3);
+  u8g.drawFrame(14, (i)*h+3, w-28, 5);
+  u8g.drawBox(14, (i)*h+4, pos, 3);
 
   //Muestro todo
-  //if (total_canciones<100){
-    //sprintf(lineaCreada, " VOL %02d/%02d TRK %02d/%02d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL), cancion, total_canciones);
-  //} else{
-    sprintf(lineaCreada, "VOL %02d/%02d TRK %03d/%03d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL), cancion, total_canciones);
-  //}
-  u8g.drawStr(1, (i+2)*h, lineaCreada); 
+  sprintf(lineaCreada, "VOL %02d/%02d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL));
+  u8g.drawStr(1, (i+2)*h, lineaCreada);
+  sprintf(lineaCreada, "TRK %03d/%03d", cancion, total_canciones);
+  u8g.drawStr(1, (i+3)*h, lineaCreada);  
 }
 
 
@@ -805,14 +802,14 @@ void setup()
   id_cancion[0] = 0; //Los inicio en 0 ya que luego van tomando los valores con menu_current
   id_cancion[1] = 0;
   id_cancion[2] = 0;
-  nivel = 1; 
-  maxEntradas = cuentaFichero("ARTISTA.TXT");
+  nivel = 1;
+  sprintf(nombreFichero, "ARTISTA.TXT");
+  maxEntradas = cuentaFichero(nombreFichero);
   menu_redraw_required = 1;
   vol=80;
 
   MP3player.setVolumen(vol, vol);
-  progAntiguo = 100;
-
+  progreso = 100;
   delay(100);
 }
 
@@ -839,17 +836,16 @@ void loop(void) {
       menu_redraw_required = 0;
     }
     else { //Al estar reproduciendo mostramos la informacion de la cancion por pantalla
-      progActual = MP3player.getPosicion();
-      if (progActual!=progAntiguo){ //Comprobar que ha cambiado el punto en el que se encontraba la cancion 
+      if (progreso!=MP3player.getPosicion()){ //Comprobar que ha cambiado el punto en el que se encontraba la cancion
+        progreso = MP3player.getPosicion();
         u8g.firstPage();
         do  {
           if (cancion_aleatorio==0)
-            dibujaReproduc(menu_current, maxEntradas, progActual);
+            dibujaReproduc(menu_current, maxEntradas, progreso);
           else
-            dibujaReproduc(cancion_aleatorio, maxEntradas, progActual);          
+            dibujaReproduc(cancion_aleatorio, maxEntradas, progreso);          
         } while(u8g.nextPage());  
-      }
-      progAntiguo = progActual;     
+      }    
     }
   }
 
@@ -870,5 +866,3 @@ void loop(void) {
   //Leemos si hay alguna actualización en los botones/encoder
   lecturaEntradas(maxEntradas);
 }
-
-
