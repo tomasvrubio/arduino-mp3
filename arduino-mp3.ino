@@ -35,7 +35,6 @@ byte stat_seq_ptr;
 //Propio del menu/lectura SD
 int menu_current = 0;
 boolean menu_redraw_required = 0;
-//char strLinea [MAX_LONG]; //¿Esta variable la necesito como global? ¿Creo que si?
 char info [3][MAX_LONG];
 char nombreFichero [MAX_LONG_FICH];
 byte nivel;
@@ -44,6 +43,7 @@ int maxEntradas =  0;
 //int cancion_aleatorio = 0;
 unsigned long tiempo_luz;
 boolean luz;
+
 
 //------------------------------------------------------------------------------
 /* \brief getKey : Identifica si se ha pulsado algun boton o se ha girado el encoder.
@@ -61,9 +61,8 @@ boolean luz;
 byte getKey()
 {
   int valueBttn1;
+  byte stat_int=(digitalRead(EncoderChnB)<<1) | digitalRead(EncoderChnA); //Comprobamos si se ha modificado el Encoder
   
-  //Comprobamos si se ha modificado el Encoder
-  byte stat_int=(digitalRead(EncoderChnB)<<1) | digitalRead(EncoderChnA);
   if (stat_int==stat_seq[stat_seq_ptr+1])
   {
     stat_seq_ptr++;
@@ -155,6 +154,7 @@ void preparaNombreFichero(byte artista, byte album, byte cancion)
     }
   }
 }
+
 
 //------------------------------------------------------------------------------
 /* \brief lecturaEntradas : En base al punto en el que nos encontramos y a la 
