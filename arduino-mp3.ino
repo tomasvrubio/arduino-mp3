@@ -5,8 +5,8 @@
 #include <AGMp3.h>
 
 //Definiciones de parametros 
-#define MAX_LONG 21         //¿Cuanto es lo maximo que puedo mostrar en la pantalla? No merece la pena almacenar mas longitud, no??
-#define MAX_LONG_FICH 31
+#define MAX_LONG 32         //Maxima longitud de linea que puedo mostrar por pantalla con el tamaño de letra escogido.
+#define MAX_LONG_FICH 31    //Tamaño maximo que se necesita para utilizar el nombre entero de un fichero mp3 (el que tiene la ruta de directorio mas larga).
 #define MENU_LONG 5
 #define MAX_VOL 0
 #define MIN_VOL 100
@@ -194,6 +194,7 @@ void lecturaEntradas(byte total_lineas) {
               }
               break;
           }
+          progreso=0;
           break;
         case 'A': //En caso de girar a la derecha la rueda.
           switch(nivel){
@@ -210,6 +211,7 @@ void lecturaEntradas(byte total_lineas) {
               }
               break;
           }
+          progreso=0;
           break;
         case 'P': //En caso de pulsar el boton del encoder.
           switch(nivel){
@@ -269,6 +271,7 @@ void lecturaEntradas(byte total_lineas) {
             case 4:
               //Si pulsamos mientras estamos escuchando una cancion se pasa a la siguiente.
               MP3player.paraMp3();
+              delay(100);
               //if (cancion_aleatorio==0)
                 siguienteCancion();
               //else
@@ -313,7 +316,7 @@ int cuentaFichero(const char* nombre) {
     }
     myFile.close();
   } else {
-    pintaMensaje("(C)PROBLEMA FICHERO.");
+    pintaMensaje("(CUENTA)PROBLEMA FICHERO.");
   }
 
   return lineas;
@@ -357,19 +360,19 @@ boolean copiaInfo(int pos_info, byte campo, const char* nombre) {
         if (letra==10)
           i++;        
       } 
-      else if (i==pos_info){ //Ya he llegado a la linea solicitada.
-
+      else if (i==pos_info){ //Ya he llegado a la linea solicitada.       
         if (letra!=10 && letra!=13){ 
-          if (letra=='ñ')             
-            letra = 'n'+125;          
-          lineaLeida[pos_letra]=letra;
-          pos_letra++;
-        
+          if (pos_letra<MAX_LONG-1){ //Solo me guardo las letras si no tengo llena ya la cadena donde almaceno la linea leida
+            if (letra=='ñ')             
+              letra = 'n'+125;          
+            lineaLeida[pos_letra]=letra;
+            pos_letra++;
+          }
         } else {
           lineaLeida[pos_letra]=0;
           pos_letra=0;
  
-          len = min(strlen(lineaLeida),20); //Me quedo con la longitud de la cadena solo si mide menos de 20 caracteres (tamaño maximo del array).
+          len = min(strlen(lineaLeida),MAX_LONG); //Me quedo con la longitud de la cadena solo si mide menos del tamaño maximo del array.
           if ( len > 0 ) {
             strncpy(info[campo],lineaLeida,len);
             encontrado = 1;
@@ -379,7 +382,7 @@ boolean copiaInfo(int pos_info, byte campo, const char* nombre) {
     }
     myFile.close();
   } else {
-    pintaMensaje("(I)PROBLEMA FICHERO.");
+    pintaMensaje("(INFO)PROBLEMA FICHERO.");
     return 0;
   }
 
@@ -481,7 +484,7 @@ void dibujaMenu(int pos_actual, int total_lineas, const char* nombre) {
           lineaLeida[pos_letra]=0;
           pos_letra=0;
  
-          len = min(strlen(lineaLeida),20);
+          len = min(strlen(lineaLeida),MAX_LONG);
           if ( len > 0 ) {
             u8g.setDefaultForegroundColor();
             if (i==pos_menu+pos_inicio) {                           //saber en cual me encuentro. cambiarlo y ponerlo bien. sacar el valor fuera del bucle para no calcularlo varias veces
@@ -529,7 +532,6 @@ void dibujaReproduc(byte cancion, int total_canciones, int pos) {
     u8g.drawStr(i, (i)*h, info[i]);
    
   u8g.setDefaultForegroundColor();
-  //u8g.drawHLine(0,(i)*h+1,w); //Calcular a que altura tengo que poner la linea
 
   //Muestro barra progreso
   u8g.drawFrame(14, (i)*h+3, w-28, 5);
@@ -685,8 +687,8 @@ void pintaMensaje(const char *mensaje) {
   SD.rmdir("RAND_DIR");
 
   return total_aleatorio;
-}
-*/
+}*/
+
 
 
 //------------------------------------------------------------------------------
@@ -780,8 +782,8 @@ void siguienteCancion()
   
   sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCI%03d.MP3", id_cancion[0], id_cancion[1], id_cancion[2]);
   maxEntradas = cuentaFichero("RANDLIST.TXT");
-}
-*/
+}*/
+
 
 
 void setup()
@@ -814,6 +816,8 @@ void setup()
   menu_redraw_required = 1;
   vol=80;
 
+  u8g.setRot180();
+  
   MP3player.setVolumen(vol, vol);
   progreso = 100;
   delay(100);
@@ -821,11 +825,6 @@ void setup()
 
 
 void loop(void) {
-
-  //¿Puedo comprobar de alguna manera que se ha sacado la SD?
-  /*while (){
-    pintaMensaje("SD NO INSERTADA");
-  }*/
 
   if (luz==1 && millis()>(tiempo_luz+TIEMPO_MAX)){ //Cuando pasa el tiempo marcado se apaga la pantalla hasta que volvamos a tocar un boton.
       digitalWrite(DisplayPin, 0);
