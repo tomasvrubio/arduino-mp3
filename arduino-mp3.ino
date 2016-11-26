@@ -241,6 +241,7 @@ void lecturaEntradas(byte total_lineas) {
         case 'B': //En caso de pulsar el boton verde izquierdo
           switch(nivel){
             case 1: //¿que funcionalidad le puedo poner?
+              menu_current-=min(4,menu_current);
               break;
             case 2:
             case 3:
@@ -260,14 +261,15 @@ void lecturaEntradas(byte total_lineas) {
           break;
         case 'M': //En caso de pulsar el boton verde derecho
           switch(nivel){
-            /*case 1:
-            case 2:*/
+            case 1:
+            case 2:
+              menu_current+=min(4,total_lineas-menu_current);
+              break;
             case 3:
-              //En funcion del nivel en que nos encontremos el aleatorio es de todo, artista o album.
-              pintaMensaje("Creando aleatorio...");
-              //maxEntradas = listadoAleatorio(nivel);
-              maxEntradas = listadoAleatorioREDUX();
+              maxEntradas = generaAleatorio();
+              siguienteAleatorio();
               MP3player.tocaMP3(nombreFichero);
+              menu_current = cancion_aleatorio;
               progreso = 100; 
               nivel=4;
               break;
@@ -275,13 +277,16 @@ void lecturaEntradas(byte total_lineas) {
               //Si pulsamos mientras estamos escuchando una cancion se pasa a la siguiente.
               MP3player.paraMp3();
               delay(100);
-              if (cancion_aleatorio==0)
+              if (cancion_aleatorio==0){
                 siguienteCancion();
-              else
+                menu_current = id_cancion[nivel-2]; 
+              }
+              else{
                 siguienteAleatorio();
+                menu_current++;  
+              }
               MP3player.tocaMP3(nombreFichero);
-              progreso = 100;
-              menu_current = id_cancion[nivel-2];    
+              progreso = 100;               
               break;
           }
           break;     
@@ -482,19 +487,25 @@ void dibujaReproduc(byte cancion, int total_canciones, int pos) {
   uint8_t i;
   char lineaCreada [MAX_LONG];
 
+  u8g.drawStr(WIDTH/3 - 3, 0, F("ESCUCHA_ME"));
+  u8g.drawHLine(0,8,WIDTH);
+
   //Mostramos los identificadores del fichero (Artista, Album, Cancion)
   for (i=0; i<nivel-1; i++)
-    u8g.drawStr(i, (i)*HEIGTH, info[i]);
+    u8g.drawStr(i, (i)*HEIGTH+10, info[i]);
    
   //Mostramos barra progreso.
-  u8g.drawFrame(14, (i)*HEIGTH+3, WIDTH-28, 5);
-  u8g.drawBox(14, (i)*HEIGTH+4, pos, 3);
+  u8g.drawFrame(14, (i)*HEIGTH+3+10, WIDTH-28, 5);
+  u8g.drawBox(14, (i)*HEIGTH+4+10, pos, 3);
 
   //Mostramos volumen y numero de cancion.
   sprintf(lineaCreada, "VOL %02d/%02d", (MIN_VOL-vol)/INC_VOL, (MIN_VOL/INC_VOL));
-  u8g.drawStr(1, (i+2)*HEIGTH, lineaCreada);
+  u8g.drawStr(1, (i+2)*HEIGTH+10, lineaCreada);
   sprintf(lineaCreada, "TRK %03d/%03d", cancion, total_canciones);
-  u8g.drawStr(1, (i+3)*HEIGTH, lineaCreada);
+  u8g.drawStr(1, (i+3)*HEIGTH+10, lineaCreada);
+
+  if (cancion_aleatorio!=0)
+    u8g.drawStr(50, (i+3)*HEIGTH+10, F("ALEAT."));
 }
 
 
@@ -555,13 +566,31 @@ void siguienteCancion()
 }
 
 
-//CREAMOS EL LISTADO DE CANCIONES ALEATORIO
-int listadoAleatorioREDUX()
+//------------------------------------------------------------------------------
+/* \brief generaAleatorio : Genera la lista de canciones aleatorias que despues 
+ *  reproduciremos. Cuenta el total de canciones que
+ *  incluiria y genera un listado equivalente de numeros aleatorios. 
+ *
+ * \param[out] total_aleatorio: Numero de canciones incluidas en la lista de canciones
+ *  aleatorias.
+ *  
+ * \note Deja en la SD dos ficheros generados "RAND.TXT" (con el listado de numeros 
+ *  aleatorios) y "SONG.TXT" (listado de las canciones incluidas en el aleatorio).
+ * 
+ * \return Numero de canciones incluidas en el aleatorio:
+ *  - 0 : Problemas a la hora de generar el aleatorio.
+ *  - Resto : Numero de canciones.
+ *  
+ * \see Hacer algo despues de llamar a listadoAleatorio para tratar la devolucion de 0 numeros.
+ */
+int generaAleatorio()
 {
   byte i=1;
   int numAleatorio=0, total_aleatorio;
   File myFile;
-  char numero[3];
+  char numero[4];
+
+  pintaMensaje("Generando aleatorio...");
 
   //Si existe RAND_DIR, borrarlo (por si se ha quedado de una ejecucion erronea anterior)
   if (SD.exists(F("RAND"))){
@@ -571,12 +600,8 @@ int listadoAleatorioREDUX()
       i++;
       sprintf(nombreFichero, "RAND/%03d", i);
     }
-    if (SD.exists(F("RAND/SONG.TXT")))
-      SD.remove(F("RAND/SONG.TXT"));
     if (SD.exists(F("RAND/RAND.TXT")))
       SD.remove(F("RAND/RAND.TXT"));
-    if (SD.exists(F("RAND/NUM.TXT")))
-      SD.remove(F("RAND/NUM.TXT")); 
   }
   else
     SD.mkdir(F("RAND"));
@@ -627,45 +652,46 @@ int listadoAleatorioREDUX()
  */
 void siguienteAleatorio()
 {
-  int linea_aleatorio;
   char cad_temporal[4];
-  byte i, j;
+  byte i;
+  File myFile;
   
   if (cancion_aleatorio < maxEntradas)
     cancion_aleatorio++;
-  else
-    cancion_aleatorio = 1;  //De momento voy a dejar el aleatorio en repeat hasta que decida que hacer
-
-  copiaInfo(cancion_aleatorio-1, 2, "RAND/RAND.TXT");
-
-  for (i=0; i<4; i++)
-    cad_temporal[i] = info[2][i];
-  cad_temporal[5] = 0;
-  linea_aleatorio = atoi(&cad_temporal[0]);
-
-  copiaInfo(linea_aleatorio-1, 2, "RAND/SONG.TXT");
-  
-  //Ahora tengo la informacion sobre la cancion que tengo que reproducir en info[2]
-  cad_temporal[0] = '0';  //Para los tres identificadores estos caracteres tienen estos valores fijos ya que son de 3 digitos
-  cad_temporal[1] = '0';
-  cad_temporal[5] = 0;
-  for (j=0; j<=2; j++){
-    for (i=0; i<=2; i++)
-      cad_temporal[i+2] = info[2][j*3+i];      
-    
-    id_cancion[j] = atoi(&cad_temporal[0]);
+  else{
+    //cancion_aleatorio = 1;  //De momento voy a dejar el aleatorio en repeat hasta que decida que hacer
+    //menu_current = 0;
+    id_cancion[2] = maxEntradas;//Me situo en la ultima cancion del album.
+    siguienteCancion(); //Paso al siguiente album o artista al encontrarme en la ultima cancion.
+    maxEntradas = generaAleatorio();
+    menu_current = 0;
+    cancion_aleatorio = 1;
   }
 
-  memset(info,0,sizeof(info));
-  copiaInfo(id_cancion[0]-1, 0, RAIZ);
-  sprintf(nombreFichero, "A%03d/LIST.TXT", id_cancion[0]);
-  copiaInfo(id_cancion[1]-1, 1, nombreFichero);
-  sprintf(nombreFichero, "A%03d/D%03d/LIST.TXT", id_cancion[0], id_cancion[1]);
-  copiaInfo(id_cancion[2]-1, 2, nombreFichero);
+  myFile = SD.open(F("RAND/RAND.TXT"));
+  if (myFile) {
+    myFile.seek(5*(cancion_aleatorio-1));
+    for (i=0;i<3;i++)
+      cad_temporal[i]=myFile.read();
+    cad_temporal[3]=0;
+    myFile.close();    
+  }
+  else {
+    pintaMensaje("(A)FICH.");
+    myFile.close();
+  }
   
-  sprintf(nombreFichero, "A%03d/D%03d/C%03d.MP3", id_cancion[0], id_cancion[1], id_cancion[2]);
-  maxEntradas = cuentaFichero(RAIZ);
+  id_cancion[2] = atoi(&cad_temporal[0]);
+
+  memset(info[2],0,MAX_LONG);
+  preparaNombreFichero(id_cancion[0], id_cancion[1], 0); //Sacamos el nombre de la cancion
+  copiaInfo(id_cancion[2]-1, 2, nombreFichero);
+    
+  //Dejamos el nombre del mp3 preparado
+  preparaNombreFichero(id_cancion[0], id_cancion[1], id_cancion[2]);
 }
+
+
 
 void setup()
 {
@@ -730,10 +756,7 @@ void loop(void) {
         progreso = MP3player.getPosicion();
         u8g.firstPage();
         do  {
-          if (cancion_aleatorio==0)
-            dibujaReproduc(menu_current, maxEntradas, progreso);
-          else
-            dibujaReproduc(cancion_aleatorio, maxEntradas, progreso);          
+            dibujaReproduc(menu_current, maxEntradas, progreso);        
         } while(u8g.nextPage());  
       }    
     }
@@ -742,13 +765,17 @@ void loop(void) {
   //Si termina de reproducir una cancion hay que pasar a la siguiente
   if (nivel==4){  
     if (!MP3player.estaTocando()){
-      if (cancion_aleatorio==0)
+      if (cancion_aleatorio==0){
         siguienteCancion();
-      else
+        menu_current = id_cancion[2];
+      }
+      else{
         siguienteAleatorio();
+        menu_current++;
+      }
         
       MP3player.tocaMP3(nombreFichero);
-      menu_current = id_cancion[2];
+      progreso = 100;
       menu_redraw_required = 1;
     }
   }
@@ -756,199 +783,3 @@ void loop(void) {
   //Leemos si hay alguna actualización en los botones/encoder
   lecturaEntradas(maxEntradas);
 }
-
-
-
-
-//MODIFICACIONES
-//17-11-2016
-//*dibujaMenu - Metido a pelo en h y w la referencia HEIGTH y WIDTH. Si funciona quitar las variables. (HECHO)
-//*dibujaMenu - Hacer el cambio para utilizar info[2] en vez de lineaLeida. (HECHO)
-//*dibujaMenu - Mirar de revisar el color en el que escribo solamente cuando escribo la linea remarcada. Al IF poner un else. (HECHO)
-//*dibujaMenu - ¿Y si me quito el calculo de longitudes? Estoy menos cubierto ante errores pero al tener un formato cerrado de entrada de datos... (el script que me genera
-//            el catálogo)
-//*cuentaFichero - Puesto codigo para que siempre se cierre el fichero. Ahora mismo no lo estaba cerrando nunca... (HECHO)
-//
-//
-//
-//
-//
-
-
-
-//------------------------------------------------------------------------------
-/* \brief listadoAleatorio : Genera la lista de canciones aleatorias que despues 
- *  reproduciremos. En funcion del nivel en el que hemos activado el aleatorio
- *  el listado incluye unas canciones u otras. Cuenta el total de canciones que
- *  incluiria y genera un listado equivalente de numeros aleatorios. 
- *
- * \param[in] caso : Informacion a mostrar en la pantalla.
- * \param[out] total_aleatorio: Numero de canciones incluidas en la lista de canciones
- *  aleatorias.
- *  
- * \note Deja en la SD dos ficheros generados "randlist.txt" (con el listado de numeros 
- *  aleatorios) y "songlist.txt" (listado de las canciones incluidas en el aleatorio).
- * 
- * \return Numero de canciones incluidas en el aleatorio:
- *  - 0 : Problemas a la hora de generar el aleatorio.
- *  - Resto : Numero de canciones.
- *  
- * \see Hacer algo despues de llamar a listadoAleatorio para tratar la devolucion de 0 numeros.
- */
-/*int listadoAleatorio(byte caso)
-{
-  byte i,j,k;
-  int total_aleatorio=0;
-  int numAleatorio;
-  char numero[6];
-  char cadena_cancion[10];
-  File myFile;
-  byte inicio_i, final_i, inicio_j, final_j, final_k;
-
-  //Si existe RAND_DIR, borrarlo (por si se ha quedado de una ejecucion erronea anterior)
-  if (SD.exists("RAND_DIR")){
-    for (i=1; i<=cuentaFichero("randlist.txt"); i++){
-      sprintf(nombreFichero, "RAND_DIR/%05d", i);
-      SD.remove(nombreFichero);
-    }
-    SD.rmdir("RAND_DIR");
-  }
-  //Eliminamos el ultimo fichero aleatorio que generamos
-  if (SD.exists("songlist.txt"))
-    SD.remove("songlist.txt");
-  if (SD.exists("randlist.txt"))
-    SD.remove("randlist.txt");
-
-
-  //Calculamos el numero total de canciones y a la vez creamos una lista con las canciones que tienen que sonar
-  switch(caso){
-    case 1:
-      inicio_i = 1; 
-      final_i =  cuentaFichero(RAIZ);
-      inicio_j = 1;   
-      break;
-    case 2:
-      inicio_i = id_cancion[0]; 
-      final_i =  id_cancion[0];
-      inicio_j = 1;
-      sprintf(nombreFichero, "ARTIS%03d/ALBUM.TXT", id_cancion[0]);
-      final_j =  cuentaFichero(nombreFichero);
-      break;
-    case 3:
-      inicio_i = id_cancion[0]; 
-      final_i =  id_cancion[0];
-      inicio_j = id_cancion[1]; 
-      final_j =  id_cancion[1];
-      break;
-  }
-
-  for (i=inicio_i; i<=final_i; i++){
-    //Para cada i tengo que calcular la cantidad de albumes que tiene ese artista (solo si caso=1)
-    if (inicio_i!=final_i){
-      sprintf(nombreFichero, "ARTIS%03d/ALBUM.TXT", i);      
-      final_j = cuentaFichero(nombreFichero);
-    }
-    for (j=inicio_j; j<=final_j; j++){
-      sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCION.TXT", i, j);
-      final_k = cuentaFichero(nombreFichero);
-      sprintf(nombreFichero, "songlist.txt");
-      myFile = SD.open(nombreFichero, FILE_WRITE);
-      for (k=1; k<=final_k; k++){
-        //Guardamos en el fichero de canciones cada una de las canciones que formaran parte de la lista aleatoria
-        sprintf(cadena_cancion, "%03d%03d%03d", i, j, k);
-        myFile.println(cadena_cancion);
-        //Por cada pasada aumentamos en 1 el indicador del tamaño de la lista de numeros a generar
-        total_aleatorio = total_aleatorio + 1;
-      }
-      myFile.close();
-    }
-  }
-
-  //Creamos la carpeta donde van los ficheros que nos permitiran saber si el numero esta ya generado o no
-  SD.mkdir("RAND_DIR");
-
-  //Inicializamos la semilla con un valor aleatorio sacado de una entrada sin utilizar para que no se repita la secuencia una y otra vez
-  i=1; 
-  randomSeed(analogRead(6));
-
-  //Generamos los numeros aleatorios
-  while (i<=total_aleatorio){
-    numAleatorio = random(1, total_aleatorio+1);
-    sprintf(nombreFichero, "RAND_DIR/%05d", numAleatorio);
-    myFile = SD.open(nombreFichero);
-    
-    if (myFile){
-      myFile.close();
-    }
-    else {
-      myFile = SD.open(nombreFichero, FILE_WRITE);
-      myFile.close();
-      myFile = SD.open("randlist.txt", FILE_WRITE);
-      sprintf(numero, "%05d", numAleatorio);
-      myFile.println(numero);
-      myFile.close();
-      i++;
-    }
-  }
-
-  //Eliminamos los ficheros generados para controlar la generacion de numeros aleatorios
-  for (i=1; i<=total_aleatorio; i++){
-    sprintf(nombreFichero, "RAND_DIR/%05d", i);
-    SD.remove(nombreFichero);
-  }
-  SD.rmdir("RAND_DIR");
-
-  return total_aleatorio;
-}*/
-
-
-//------------------------------------------------------------------------------
-/* \brief siguienteAleatorio : Pasa a la siguiente cancion disponible dentro del
- *  listado aleatorio.
- *  
- * \note Si llega al final del aleatorio vuelve a comenzar desde el principio.
- * 
- * \see Le puedo poner un return y devolver 0 si he llegado a la ultima cancion. O bien
- *  algun numero mostrando que he tenido un error (cual?). 
- */
-/*void siguienteAleatorio()
-{
-  int linea_aleatorio;
-  char cad_temporal[6];
-  byte i, j;
-  
-  if (cancion_aleatorio < maxEntradas)
-    cancion_aleatorio++;
-  else
-    cancion_aleatorio = 1;  //De momento voy a dejar el aleatorio en repeat hasta que decida que hacer
-
-  copiaInfo(cancion_aleatorio-1, 2, "RANDLIST.TXT");
-
-  for (i=0; i<5; i++)
-    cad_temporal[i] = info[2][i];
-  cad_temporal[5] = 0;
-  linea_aleatorio = atoi(&cad_temporal[0]);
-
-  copiaInfo(linea_aleatorio-1, 2, "SONGLIST.TXT");
-  
-  //Ahora tengo la informacion sobre la cancion que tengo que reproducir en info[2]
-  cad_temporal[0] = '0';  //Para los tres identificadores estos caracteres tienen estos valores fijos ya que son de 3 digitos
-  cad_temporal[1] = '0';
-  cad_temporal[5] = 0;
-  for (j=0; j<=2; j++){
-    for (i=0; i<=2; i++)
-      cad_temporal[i+2] = info[2][j*3+i];      
-    
-    id_cancion[j] = atoi(&cad_temporal[0]);
-  }
-
-  memset(info,0,sizeof(info));
-  copiaInfo(id_cancion[0]-1, 0, RAIZ);
-  sprintf(nombreFichero, "ARTIS%03d/ALBUM.TXT", id_cancion[0]);
-  copiaInfo(id_cancion[1]-1, 1, nombreFichero);
-  sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCION.TXT", id_cancion[0], id_cancion[1]);
-  copiaInfo(id_cancion[2]-1, 2, nombreFichero);
-  
-  sprintf(nombreFichero, "ARTIS%03d/ALBUM%03d/CANCI%03d.MP3", id_cancion[0], id_cancion[1], id_cancion[2]);
-  maxEntradas = cuentaFichero("RANDLIST.TXT");
-}*/
